@@ -1,0 +1,13 @@
+[workspace.package]
+rust-version = "1.80.0"
+edition = "2021"
+
+[workspace]
+resolver = "2"
+members = [
+    "nest-client",
+    "nest-server"
+]
+
+[workspace.dependencies]
+rand = "0.8.5"
