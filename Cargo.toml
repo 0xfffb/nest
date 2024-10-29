@@ -1,5 +1,4 @@
 [workspace.package]
-rust-version = "1.80.0"
 edition = "2021"
 
 [workspace]
@@ -10,4 +9,5 @@ members = [
 ]
 
 [workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
 rand = "0.8.5"

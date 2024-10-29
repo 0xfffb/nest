@@ -1,6 +1,8 @@
 [package]
 name = "nest-client"
 version = "0.1.0"
-edition = "2021"
+edition = { workspace = true }
 
 [dependencies]
+tokio = { workspace = true }
+rand = { workspace = true }
