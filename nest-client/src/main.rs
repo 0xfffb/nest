@@ -9,7 +9,7 @@ struct Servers {
 
 #[tokio::main]
 async fn main() {
-    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
+    let addr: SocketAddr = "0.0.0.0:8081".parse().unwrap();
     let mut stream = TcpStream::connect(addr).await.unwrap();
     let local_addr = stream.local_addr().unwrap();
     println!("Local address: {}", local_addr);

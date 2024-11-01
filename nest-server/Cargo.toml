@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = { workspace = true }
 
 [dependencies]
-tokio = { workspace = true }
-log = "0.4.22"
+ngrok = { version="0.13", features=["axum"] }
+tokio = { version = "1.26", features = ["full"] }
+axum = "0.6"
+anyhow = "1.0"

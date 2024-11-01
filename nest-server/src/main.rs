@@ -1,60 +1,43 @@
-
-use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
 
-
-struct Client {
-    addr: SocketAddr,
-    stream: Arc<Mutex<TcpStream>>,
-}
-
-impl Client {
-    pub fn new(addr: SocketAddr, stream: Arc<Mutex<TcpStream>>) -> Self {
-        Self { addr, stream }
-    }
-}
-
-struct StreamPool {
-    clients: HashMap<SocketAddr, Client>,
-}
-
-impl StreamPool {
-    fn new() -> Self { Self { clients: HashMap::new() } }
-
-    fn insert(&mut self, addr: SocketAddr, client: Client) {
-        self.clients.insert(addr, client);
-    }
-
-    fn get(&self, addr: SocketAddr) -> Option<&Client> { self.clients.get(&addr) }
-
-    fn remove(&mut self, addr: &SocketAddr) {
-        self.clients.remove(addr);
-    }
-
-    async fn handle(&mut self, addr: SocketAddr, mut stream: TcpStream) {
-        // let client = Client::new(addr, Arc::new(Mutex::new(stream)));
-        // self.clients.insert(addr, client);
-        let mut buffer = [0; 1024];
-        let n = stream.read(&mut buffer).await.unwrap();
-        println!("Receive: {:?}, from: {}", String::from_utf8_lossy(&buffer[..n]), addr);
-        stream.write(&buffer[0..n]).await.unwrap();
-    }
-}
+use axum::{
+    extract::ConnectInfo,
+    routing::get,
+    Router,
+};
+use ngrok::prelude::*;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
+    // build our application with a single route
+    let app = Router::new().route(
+        "/",
+        get(
+            |ConnectInfo(remote_addr): ConnectInfo<SocketAddr>| async move {
+                format!("Hello, {remote_addr:?}!\r\n")
+            },
+        ),
+    );
 
-    let addr: SocketAddr = "0.0.0.0:8080".parse().unwrap();
-    let listener = TcpListener::bind(&addr).await.unwrap();
-    println!("listening on {}", addr);
-    let mut stream_pool = StreamPool::new();
-    loop {
-        let (mut stream, addr) = listener.accept().await.unwrap();
-        println!("Accepted connection from {}", addr);
-        tokio::spawn(&stream_pool.handle(addr, stream));
-    }
+    let tun = ngrok::Session::builder()
+        // Read the token from the NGROK_AUTHTOKEN environment variable
+        .authtoken("2oBb9ZjvpHjEjzZoEfqI7hVzDJJ_4WvqwQNNGsNB2xFUt857M")
+        // Connect the ngrok session
+        .connect()
+        .await?
+        .http_endpoint()
+        // Start a tunnel with an HTTP edge
+        .listen()
+        .await?;
+
+    println!("Tunnel started on URL: {:?}", tun.url());
+
+    // Instead of binding a local port like so:
+    // axum::Server::bind(&"0.0.0.0:8000".parse().unwrap())
+    // Run it with an ngrok tunnel instead!
+    axum::Server::builder(tun)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+        .await?;
+
+    Ok(())
 }
